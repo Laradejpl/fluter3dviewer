@@ -7,6 +7,7 @@ environment:
   sdk: ^3.5.4
 
 dependencies:
+  audioplayers: ^6.1.0
   flutter:
     sdk: flutter
   
@@ -24,4 +25,15 @@ flutter:
   - assets/models/jetski.glb
   - assets/models/burger.glb
   - assets/models/cube.mtl
+  - assets/models/bomb.glb
+  - assets/models/starship.glb
+  - assets/images/jane.png
+  - assets/images/pablo.png
+  - assets/images/rico.png
+  - assets/images/bomb.png
+  - assets/images/starship.png
+  - assets/images/burger.png
+  - assets/sounds/bombsound.wav
+
+  
 
