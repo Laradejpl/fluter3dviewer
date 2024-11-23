@@ -1,4 +1,3 @@
 # objecttreed
 
-A new Flutter project.
-# fluter3dviewer
+a simple 3 d viewer.
