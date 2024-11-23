@@ -1,217 +1,200 @@
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'dart:async';
-import 'dart:math' as math;
+import 'dart:math';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MaterialApp(
+    home: BurgerClickerGame(),
+    debugShowCheckedModeBanner: false,
+  ));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class BurgerClickerGame extends StatefulWidget {
+  const BurgerClickerGame({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.blue,
-      ),
-      home: const ModelViewerPage(),
-    );
-  }
+  State<BurgerClickerGame> createState() => _BurgerClickerGameState();
 }
 
-class Particle {
-  Offset position;
-  double size;
-  double opacity;
-  
-  Particle(this.position, this.size)
-      : opacity = 1.0;
-
-  void update() {
-    opacity -= 0.05;
-    size *= 0.95;
-  }
-
-  bool get isDead => opacity <= 0;
-}
-
-class ModelViewerPage extends StatefulWidget {
-  const ModelViewerPage({super.key});
+class _BurgerClickerGameState extends State<BurgerClickerGame> {
+  int score = 0;
+  bool isBurgerVisible = false;
+  Timer? _disappearTimer;
+  final random = Random();
+  double burgerX = 0;
+  double burgerY = 0;
 
   @override
-  State<ModelViewerPage> createState() => _ModelViewerPageState();
-}
+  void initState() {
+    super.initState();
+    // Démarrer le jeu après le build initial
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showNextBurger();
+    });
+  }
 
-class _ModelViewerPageState extends State<ModelViewerPage> {
-  bool _autoRotate = true;
-  bool _isAnimating = false;
-  Timer? _animationTimer;
-  Timer? _particleTimer;
-  Offset _currentPosition = Offset.zero;
-  double _velocityY = 0;
-  double _velocityX = 10;
-  bool _isZigZagPhase = true;
-  final List<Particle> _particles = [];
-  final _random = math.Random();
-  
+  void showNextBurger() {
+    if (!mounted) return;
+
+    final size = MediaQuery.of(context).size;
+    setState(() {
+      burgerX = random.nextDouble() * (size.width - 200);
+      burgerY = 100 + random.nextDouble() * (size.height - 300);
+      isBurgerVisible = true;
+    });
+
+    // Programmer la disparition du burger après 3 secondes
+    _disappearTimer?.cancel();
+    _disappearTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          isBurgerVisible = false;
+        });
+        // Programmer l'apparition du prochain burger après 1 seconde
+        Future.delayed(const Duration(seconds: 1), showNextBurger);
+      }
+    });
+  }
+
+  void _incrementScore() {
+    if (!isBurgerVisible) return;
+    
+    setState(() {
+      score += 10;
+      isBurgerVisible = false;
+    });
+    
+    _disappearTimer?.cancel();
+    // Montrer le prochain burger après un court délai
+    Future.delayed(const Duration(milliseconds: 500), showNextBurger);
+  }
+
   @override
   void dispose() {
-    _animationTimer?.cancel();
-    _particleTimer?.cancel();
+    _disappearTimer?.cancel();
     super.dispose();
-  }
-
-  void _addParticles() {
-    // Ajout de plus de particules
-    for (int i = 0; i < 8; i++) {
-      final randomOffset = Offset(
-        _random.nextDouble() * 30 - 15, // Réduit la dispersion horizontale
-        _random.nextDouble() * 30 - 15, // Réduit la dispersion verticale
-      );
-      
-      // Crée une particule avec une taille plus grande
-      _particles.add(Particle(
-        _currentPosition + randomOffset,
-        _random.nextDouble() * 8 + 4, // Taille augmentée
-      ));
-    }
-  }
-
-  void _updateParticles() {
-    for (var particle in _particles) {
-      particle.update();
-    }
-    _particles.removeWhere((particle) => particle.isDead);
-  }
-
-  void _startZigZagAnimation() {
-    if (_isAnimating) return;
-    _particles.clear();
-    setState(() {
-      _isAnimating = true;
-      _autoRotate = false;
-      _currentPosition = const Offset(-400, 0);
-      _velocityY = 0;
-      _velocityX = 10;
-      _isZigZagPhase = true;
-    });
-
-    // Timer plus rapide pour les particules
-    _particleTimer = Timer.periodic(const Duration(milliseconds: 8), (timer) {
-      if (mounted && _isAnimating) {
-        setState(() {
-          _addParticles();
-          _updateParticles();
-        });
-      } else {
-        timer.cancel();
-      }
-    });
-
-    _animationTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      setState(() {
-        if (_isZigZagPhase) {
-          _currentPosition += Offset(_velocityX, 3);
-          
-          if (_currentPosition.dx <= -400 || _currentPosition.dx >= 400) {
-            _velocityX = -_velocityX;
-          }
-
-          if (timer.tick > 940) {
-            _isZigZagPhase = false;
-            _velocityY = 0;
-          }
-        } else {
-          _velocityY += 0.4;
-          _currentPosition += Offset(_velocityX * 0.95, _velocityY);
-
-          final size = MediaQuery.of(context).size;
-          if (_currentPosition.dy > size.height - 250) {
-            timer.cancel();
-            _particleTimer?.cancel();
-            setState(() {
-              _isAnimating = false;
-              _currentPosition = Offset(_currentPosition.dx, size.height - 250);
-              _autoRotate = true;
-              _particles.clear();
-            });
-          }
-        }
-      });
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Visualiseur 3D avec ZigZag'),
-      ),
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Particules
-          ..._particles.map((particle) => Positioned(
-            left: MediaQuery.of(context).size.width / 2 + particle.position.dx,
-            top: particle.position.dy,
-            child: Container(
-              width: particle.size,
-              height: particle.size,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  colors: [
-                    Colors.blue.shade300.withOpacity(particle.opacity),
-                    Colors.blue.shade200.withOpacity(particle.opacity * 0.5),
-                    Colors.blue.shade100.withOpacity(particle.opacity * 0.2),
-                  ],
+          // Score en haut
+          Positioned(
+            top: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                'Score: $score',
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
                 ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(particle.opacity * 0.5),
-                    blurRadius: particle.size * 0.5,
-                    spreadRadius: particle.size * 0.2,
-                  ),
-                ],
-              ),
-            ),
-          )),
-          
-          // Modèle 3D
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 16),
-            left: MediaQuery.of(context).size.width / 2 + _currentPosition.dx,
-            top: _currentPosition.dy,
-            child: SizedBox(
-              width: 200,
-              height: 200,
-              child: ModelViewer(
-                src: 'assets/models/jetski.glb',
-                alt: 'Modèle 3D',
-                loading: Loading.eager,
-                cameraControls: !_isAnimating,
-                autoRotate: _autoRotate && !_isAnimating,
-                rotationPerSecond: "30deg",
-                autoPlay: true,
-                fieldOfView: "30deg",
-                backgroundColor: Colors.transparent,
               ),
             ),
           ),
+
+          // Burger avec effet lumineux violet
+          if (isBurgerVisible)
+            Positioned(
+              left: burgerX,
+              top: burgerY,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: ElevatedButton(
+                  onPressed: _incrementScore,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: Stack(
+                    children: [
+                      // Effet de lueur violette
+                      Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          // gradient: RadialGradient(
+                          //   colors: [
+                          //     Colors.purple.withOpacity(0.3),
+                          //     Colors.transparent,
+                          //   ],
+                          //   stops: const [0.2, 1.0],
+                          // ),
+                        ),
+                      ),
+                      
+                      // ModelViewer
+                      SizedBox(
+                        width: 200,
+                        height: 200,
+                        child: ModelViewer(
+                          src: 'assets/models/burger.glb',
+                          alt: 'Burger 3D',
+                          autoRotate: true,
+                          cameraControls: false,
+                          autoPlay: true,
+                          backgroundColor: Colors.transparent,
+                          scale: "1.0 1.0 1.0",
+                          fieldOfView: "30deg",
+                          exposure: 1.2,
+                          shadowIntensity: 0,
+                          disableZoom: true,
+                          cameraOrbit: "0deg 90deg 100%",
+                        ),
+                      ),
+                      
+                      // Overlay effet violet
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          // gradient: LinearGradient(
+                          //   begin: Alignment.topLeft,
+                          //   end: Alignment.bottomRight,
+                          //   colors: [
+                          //     Colors.purple.withOpacity(0.2),
+                          //     Colors.transparent,
+                          //     Colors.transparent,
+                          //     Colors.purple.withOpacity(0.2),
+                          //   ],
+                          //   stops: const [0.0, 0.3, 0.7, 1.0],
+                          // ),
+                        ),
+                      ),
+                      
+                      // Effet de brillance
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 100,
+                          decoration: BoxDecoration(
+                            // gradient: LinearGradient(
+                            //   begin: Alignment.topCenter,
+                            //   end: Alignment.bottomCenter,
+                            //   colors: [
+                            //     Colors.purple.withOpacity(0.3),
+                            //     Colors.transparent,
+                            //   ],
+                            // ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isAnimating ? null : _startZigZagAnimation,
-        label: Text(_isAnimating ? 'Animation...' : 'Démarrer'),
-        icon: Icon(_isAnimating ? Icons.hourglass_empty : Icons.play_arrow),
       ),
     );
   }

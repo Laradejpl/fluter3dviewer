@@ -22,5 +22,6 @@ flutter:
   assets:
   - assets/models/cube.obj
   - assets/models/jetski.glb
+  - assets/models/burger.glb
   - assets/models/cube.mtl
 
