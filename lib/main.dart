@@ -37,7 +37,7 @@ class _ModelViewerPageState extends State<ModelViewerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Visualiseur 3D $'),
+        title: const Text('Visualiseur 3D '),
         actions: [
           // Bouton pour la rotation automatique
           IconButton(
